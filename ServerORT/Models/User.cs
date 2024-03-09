@@ -2,8 +2,12 @@
 {
     public class User
     {
-        public string userName { get; set; } = string.Empty;
-        public string userPass {  get; set; } = string.Empty;
+        public int id { get; set; }
+        public string login { get; set; } = string.Empty;
+        public string pass {  get; set; } = string.Empty;
+        public string email { get; set; } = string.Empty;
+        public string status { get; set; } = string.Empty;
+
 
     }
 }
