@@ -1,8 +1,22 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using ServerORT.DbContext;
+using System.Text;
 
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("zenitsu is the best character in the world")),
+            ValidateIssuer = false,
+            ValidateAudience = false
+        };
+    });
 
 // Add services to the container.
 builder.Services.AddDbContext<MyDbContext>(options =>

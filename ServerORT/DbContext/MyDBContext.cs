@@ -15,6 +15,10 @@ namespace ServerORT.DbContext
             base.OnModelCreating(modelBuilder);
         }
         public DbSet<User> Users { get; set; }
+        public DbSet<TestList> TestsList { get; set; }
+        public DbSet<Question> Questions { get; set; }
+
+
 
     }
 }
