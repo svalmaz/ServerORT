@@ -7,7 +7,9 @@
         public string pass {  get; set; } = string.Empty;
         public string email { get; set; } = string.Empty;
         public string status { get; set; } = string.Empty;
+		public string git { get; set; } = string.Empty;
 
 
-    }
+
+	}
 }

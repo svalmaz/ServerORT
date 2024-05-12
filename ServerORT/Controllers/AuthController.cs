@@ -14,6 +14,8 @@ using System.Text;
 using ServerORT.Commands;
 using Azure.Core;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication;
+using static System.Net.WebRequestMethods;
 namespace ServerORT.Controllers
 {
     [Route("api/[controller]")]
@@ -59,13 +61,26 @@ namespace ServerORT.Controllers
                         email = request.userEmail,
                         pass = hashPass,
                         login = request.userName,
-                        status = "student"
+                        status = "awaitsUser",
+                        git = ""
                         
                     };
 
                     _context.Users.Add(new_user);
                     await _context.SaveChangesAsync();
-                    return Ok(new ApiResponse { Status = "successful", Message = "user has been created." });
+					if (_context.Users.Count(u => u.email == request.userEmail) > 0)
+					{
+						var user = _context.Users.First(u => u.email == request.userEmail);
+						//   RandomString random = new RandomString();
+
+						ResetPass reset = new ResetPass();
+                      //  Console.WriteLine(request.userEmail + "a");
+						reset.SendEmail(request.userEmail.ToString(), "Сonfirm email", "Your link: " + "https://localhost:7140/api/Auth/acceptTeacher?teacherId=" + user.id);
+						await _context.SaveChangesAsync();
+
+						return Ok(new ApiResponse { Status = "successful", Message = "confirmation link sent by email" });
+					} 
+					return Ok(new ApiResponse { Status = "successful", Message = "user has been created." });
                 }
                 else if(request.userStatus == "teacher")
                 {
@@ -80,8 +95,11 @@ namespace ServerORT.Controllers
 
                     };
                     _context.Users.Add(new_user);
-                    await _context.SaveChangesAsync();
-                    return Ok(new ApiResponse { Status = "successful", Message = "wait for a response" });
+					await _context.SaveChangesAsync();
+                    //https://localhost:7140/api/Auth/acceptTeacher?teacherId=1
+                   
+
+						return Ok(new ApiResponse { Status = "successful", Message = "wait for a response" });
                 }
                 return Problem("Bad request");
 
@@ -104,8 +122,8 @@ namespace ServerORT.Controllers
                 return Ok(teacher);
             }
         }
-        [HttpPost("acceptTeacher")]
-        public async Task<ActionResult> AcceptTeacher(int teacherId, string token)
+        [HttpGet("acceptTeacher")]
+        public async Task<ActionResult> AcceptTeacher(int teacherId)
         {
             if (_context == null)
             {
@@ -114,8 +132,21 @@ namespace ServerORT.Controllers
             else
             {
                 var teacher = _context.Users.Where(u => u.id ==  teacherId).FirstOrDefault();
-                teacher.status = "teacher";
-                await _context.SaveChangesAsync();
+                if(teacher == null)
+                {
+					return Problem("Oops... user has already been accepted");
+				}
+				if (teacher.status == "awaitsUser")
+                {
+					teacher.status = "student";
+
+				}
+                else
+                {
+					teacher.status = "teacher";
+
+				}
+				await _context.SaveChangesAsync();
                 return Ok("Successeful");
             }
         }
@@ -194,7 +225,49 @@ namespace ServerORT.Controllers
                 return builder.ToString().ToLower();
             return builder.ToString();
         }
-        [HttpPost("login")]
+		[HttpGet("loginGit")]
+		public IActionResult Login()
+		{
+			Console.WriteLine("Redirecting to GitHub for authentication...");
+			return Challenge(new AuthenticationProperties { RedirectUri = "/api/Auth/getUserId1" }, "GitHub");
+		}
+		[HttpGet("GetUserId1")]
+		public async Task<ActionResult> GetUserId1()
+		{
+            Console.WriteLine(gitId);
+			if (await _context.Users.CountAsync(u => u.git == gitId) > 0)
+			{
+				var user = _context.Users.First(u => u.git == gitId);
+				string token = CreateToken(user);
+				return Ok(token);
+
+			}
+                
+
+			//var userId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+			// Действия после успешной аутентификации, например, перенаправление или возвращение данных
+			return Problem("account is not connected");
+
+		}
+		[HttpGet("GetUserId")]
+		public async Task<ActionResult> GetUserId()
+		{
+			if (await _context.Users.CountAsync(u => u.git == gitId) > 0)
+            {
+
+				return Ok(gitId);
+
+			}
+
+
+			//var userId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+			// Действия после успешной аутентификации, например, перенаправление или возвращение данных
+			return Problem("account is not connected");
+
+		}
+		public static string gitId = "";
+
+		[HttpPost("login")]
         public async Task<ActionResult> Login(UserLoginDto request)
         {
             if (_context.Users == null)
